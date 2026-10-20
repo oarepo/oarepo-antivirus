@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from invenio_records_resources.services.files.config import FileServiceConfig
 from invenio_records_resources.services.files.processors import FileProcessor
+
 from ..antivirus_wrapper import Antivirus, AntivirusResult
 
 if TYPE_CHECKING:
@@ -28,15 +28,11 @@ class AntivirusFileProcessor(FileProcessor):
 
     @override
     def process(self, file_record: FileRecord) -> None:
-        """Run this processor for ``file_record``.
-
-        The current implementation emits a placeholder message; it does not
-        yet invoke the ClamAV scanner.
-        """
+        """Run this processor for ``file_record``."""
         with file_record.get_stream("rb") as stream:
             antivirus_result: AntivirusResult = Antivirus.scan_stream(stream)
 
         if antivirus_result.is_ok:
-            print("ok")
+            print("ok")  # noqa: T201
         else:
-            print("not ok")
+            print("not ok")  # noqa: T201

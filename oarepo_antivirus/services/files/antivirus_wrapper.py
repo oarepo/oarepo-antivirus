@@ -6,10 +6,12 @@
 from __future__ import annotations
 
 import warnings
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from invenio_records_resources.records.api import FileRecord
 import clamd
+
+if TYPE_CHECKING:
+    from s3fs import S3File
 
 warnings.filterwarnings("ignore", category=UserWarning, module="clamd")
 
@@ -41,7 +43,7 @@ class Antivirus:
     """Provide a convenience interface to the local ClamAV daemon."""
 
     @staticmethod
-    def scan_stream(file_stream) -> AntivirusResult:
+    def scan_stream(file_stream: S3File) -> AntivirusResult:
         """Scan the file at ``file_path`` and return its status and details.
 
         Connection, file access, and scanner errors are returned as an
