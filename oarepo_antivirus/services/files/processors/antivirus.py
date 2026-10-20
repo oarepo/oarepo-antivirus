@@ -5,11 +5,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, override
 
 from invenio_records_resources.services.files.config import FileServiceConfig
 from invenio_records_resources.services.files.processors import FileProcessor
-from ..antivirus_wrapper import Antivirus
+from ..antivirus_wrapper import Antivirus, AntivirusResult
 
 if TYPE_CHECKING:
     from invenio_records_resources.records import FileRecord
@@ -33,14 +33,10 @@ class AntivirusFileProcessor(FileProcessor):
         The current implementation emits a placeholder message; it does not
         yet invoke the ClamAV scanner.
         """
-        stream = file_record.get_stream("rb")
-        antivirus_result: AntivirusResult = Antivirus.scan(stream)
+        with file_record.get_stream("rb") as stream:
+            antivirus_result: AntivirusResult = Antivirus.scan_stream(stream)
+
         if antivirus_result.is_ok:
             print("ok")
         else:
             print("not ok")
-
-class AntivirusFileProcessorsMixin:
-    """Append the antivirus processor to the file processors on FileServiceConfig."""
-
-    file_processors: ClassVar[list] = [*FileServiceConfig.file_processors, AntivirusFileProcessor()]

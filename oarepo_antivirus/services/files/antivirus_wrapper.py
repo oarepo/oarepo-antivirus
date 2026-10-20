@@ -8,6 +8,7 @@ from __future__ import annotations
 import warnings
 from pathlib import Path
 
+from invenio_records_resources.records.api import FileRecord
 import clamd
 
 warnings.filterwarnings("ignore", category=UserWarning, module="clamd")
@@ -40,7 +41,7 @@ class Antivirus:
     """Provide a convenience interface to the local ClamAV daemon."""
 
     @staticmethod
-    def scan(file_path: str) -> AntivirusResult:
+    def scan_stream(file_stream) -> AntivirusResult:
         """Scan the file at ``file_path`` and return its status and details.
 
         Connection, file access, and scanner errors are returned as an
@@ -50,8 +51,7 @@ class Antivirus:
             clam = clamd.ClamdNetworkSocket(host="localhost", port=3310)
             clam.reload()
 
-            with Path(file_path).open("rb") as f:
-                scan_result = clam.instream(f)
+            scan_result = clam.instream(file_stream)
 
             # Parse the result dictionary, e.g., {'stream': ('OK', None)} or ('FOUND', 'Virus_Name')
             status, details = scan_result.get("stream", ("ERROR", "Unknown error"))
