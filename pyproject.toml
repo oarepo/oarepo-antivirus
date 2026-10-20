@@ -20,6 +20,9 @@ oarepoantivirus = "oarepo_antivirus.ext:OARepoAntivirus"
 [project.entry-points."invenio_base.apps"]
 oarepo_antivirus = "oarepo_antivirus.ext:OARepoAntivirus"
 
+[project.entry-points."oarepo.file_processors"]
+oarepo_antivirus_processor = "oarepo_antivirus.services.files.processors.antivirus:AntivirusFileProcessor"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "/oarepo_antivirus",

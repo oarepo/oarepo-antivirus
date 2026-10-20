@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from invenio_records_resources.services.files.config import FileServiceConfig
 from invenio_records_resources.services.files.processors import FileProcessor
+from ..antivirus_wrapper import Antivirus
 
 if TYPE_CHECKING:
     from invenio_records_resources.records import FileRecord
@@ -32,8 +33,12 @@ class AntivirusFileProcessor(FileProcessor):
         The current implementation emits a placeholder message; it does not
         yet invoke the ClamAV scanner.
         """
-        raise NotImplementedError
-
+        stream = file_record.get_stream("rb")
+        antivirus_result: AntivirusResult = Antivirus.scan(stream)
+        if antivirus_result.is_ok:
+            print("ok")
+        else:
+            print("not ok")
 
 class AntivirusFileProcessorsMixin:
     """Append the antivirus processor to the file processors on FileServiceConfig."""
