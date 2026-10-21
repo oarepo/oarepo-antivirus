@@ -6,12 +6,9 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import clamd
-
-if TYPE_CHECKING:
-    from s3fs import S3File
 
 warnings.filterwarnings("ignore", category=UserWarning, module="clamd")
 
@@ -57,7 +54,7 @@ class Antivirus:
 
             # Parse the result dictionary, e.g., {'stream': ('OK', None)} or ('FOUND', 'Virus_Name')
             status, details = scan_result.get("stream", ("ERROR", "Unknown error"))
-            return AntivirusResult(status, str(details))
+            return AntivirusResult(status, details)
 
         except clamd.BufferTooLongError as e:
             return AntivirusResult("ERROR", str(e))
