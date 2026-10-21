@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import clamd
 
@@ -25,8 +25,8 @@ class AntivirusResult:
 
     def __init__(self, status: str, details: str | None):
         """Initialize a result with the scanner status and optional details."""
-        self._status = status
-        self._details = details
+        self._status: str = status
+        self._details: str | None = details
 
     @property
     def is_ok(self) -> bool:
@@ -43,7 +43,7 @@ class Antivirus:
     """Provide a convenience interface to the local ClamAV daemon."""
 
     @staticmethod
-    def scan_stream(file_stream: S3File) -> AntivirusResult:
+    def scan_stream(file_stream: Any) -> AntivirusResult:
         """Scan the file at ``file_path`` and return its status and details.
 
         Connection, file access, and scanner errors are returned as an
@@ -57,7 +57,7 @@ class Antivirus:
 
             # Parse the result dictionary, e.g., {'stream': ('OK', None)} or ('FOUND', 'Virus_Name')
             status, details = scan_result.get("stream", ("ERROR", "Unknown error"))
-            return AntivirusResult(status, details)
+            return AntivirusResult(status, str(details))
 
         except clamd.BufferTooLongError as e:
             return AntivirusResult("ERROR", str(e))

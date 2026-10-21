@@ -32,7 +32,9 @@ class AntivirusFileProcessor(FileProcessor):
         with file_record.get_stream("rb") as stream:
             antivirus_result: AntivirusResult = Antivirus.scan_stream(stream)
 
-        if antivirus_result.is_ok:
-            print("ok")  # noqa: T201
-        else:
-            print("not ok")  # noqa: T201
+        metadata = file_record.metadata or {}
+
+        if not antivirus_result.is_ok:
+            metadata["error"] = antivirus_result.details
+
+        file_record.metadata = metadata
