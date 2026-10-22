@@ -41,10 +41,11 @@ class Antivirus:
 
     @staticmethod
     def scan_stream(file_stream: Any) -> AntivirusResult:
-        """Scan the file at ``file_path`` and return its status and details.
+        """Scan a binary file stream and return its status and details.
 
-        Connection, file access, and scanner errors are returned as an
-        ``ERROR`` result instead of being raised to the caller.
+        The stream is passed to ClamAV's ``INSTREAM`` command. Connection,
+        stream-size, and scanner errors are returned as an ``ERROR`` result
+        instead of being raised to the caller.
         """
         try:
             clam = clamd.ClamdNetworkSocket(host="localhost", port=3310)
