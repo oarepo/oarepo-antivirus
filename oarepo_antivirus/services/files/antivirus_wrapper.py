@@ -5,9 +5,17 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
-import clamd
+with warnings.catch_warnings(record=False):
+    warnings.filterwarnings(
+        "ignore",
+        message=r"^pkg_resources is deprecated as an API\.",
+        category=UserWarning,
+        module=r"^clamd(\.|$)",
+    )
+    import clamd
 
 
 class AntivirusResult:

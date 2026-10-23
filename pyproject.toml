@@ -23,12 +23,10 @@ oarepo_antivirus = "oarepo_antivirus.ext:OARepoAntivirus"
 [project.entry-points."oarepo.file_processors"]
 oarepo_antivirus_processor = "oarepo_antivirus.services.files.processors.antivirus:AntivirusFileProcessor"
 
+[project.entry-points."flask.commands"]
+antivirus = "oarepo_antivirus.cli:antivirus_cli"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "/oarepo_antivirus",
-]
-
-[tool.pytest.ini_options]
-filterwarnings = [
-    "ignore:pkg_resources is deprecated as an API:UserWarning",
 ]
