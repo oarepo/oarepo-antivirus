@@ -6,7 +6,8 @@
 
 - Python 3.14
 - OARepo 14
-- A ClamAV daemon reachable by the application at `localhost:3310`
+- A ClamAV daemon reachable by the application at the address configured by
+  `ANTIVIRUS_DAEMON_ADDRESS` in `oarepo_antivirus/config.py`
 
 The package uses the `clamd` Python client to communicate with ClamAV. The daemon must be configured to accept network socket connections and support the `INSTREAM` command.
 
@@ -32,13 +33,22 @@ For each file record, `AntivirusFileProcessor` opens the file as a binary stream
 
 The processor does not raise an exception for ClamAV connection or stream-size errors; the wrapper returns these as `ERROR` results, which are likewise recorded in metadata. The processor does not itself reject, quarantine, or delete a file. The host application can use the `error` metadata to apply its own policy.
 
-The scanner address defaults to `127.0.0.1:3310`. Override it in the OARepo application's Flask configuration with `ANTIVIRUS_DAEMON_ADDRESS`, for example:
+The default scanner address is defined by `ANTIVIRUS_DAEMON_ADDRESS` in
+`oarepo_antivirus/config.py` (`127.0.0.1:3310`). To change the package default,
+edit that setting:
 
 ```python
 ANTIVIRUS_DAEMON_ADDRESS = {"ip": "clamav", "port": 3310}
 ```
 
-The file processor reads this setting from the active Flask application when it scans a file. ClamAV is asked to reload its signatures before each stream scan.
+You can also override the setting in the OARepo application's Flask
+configuration, for example:
+
+```python
+ANTIVIRUS_DAEMON_ADDRESS = {"ip": "clamav", "port": 3310}
+```
+
+The file processor reads this setting from the active Flask application when it scans a file. ClamAV is also asked to reload its signatures before each stream scan.
 
 ## Direct use
 
