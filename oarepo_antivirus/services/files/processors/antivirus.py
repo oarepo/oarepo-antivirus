@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
+from flask import current_app
 from invenio_records_resources.services.files.processors import FileProcessor
 
 from ..antivirus_wrapper import Antivirus, AntivirusResult
@@ -29,8 +30,9 @@ class AntivirusFileProcessor(FileProcessor):
     @override
     def process(self, file_record: FileRecord) -> None:
         """Run this processor for ``file_record``."""
+        address = current_app.config["ANTIVIRUS_DAEMON_ADDRESS"]
         with file_record.get_stream("rb") as stream:
-            antivirus_result: AntivirusResult = Antivirus.scan_stream(stream)
+            antivirus_result: AntivirusResult = Antivirus.scan_stream(stream, address)
 
         metadata = file_record.metadata or {}
 

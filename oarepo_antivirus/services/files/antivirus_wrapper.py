@@ -1,16 +1,13 @@
 # SPDX-FileCopyrightText: 2026 CESNET z.s.p.o.
 # SPDX-License-Identifier: MIT
 
-"""Scan files for malware using a local ClamAV daemon."""
+"""Scan data for malware using a local ClamAV daemon."""
 
 from __future__ import annotations
 
-import warnings
 from typing import Any
 
 import clamd
-
-warnings.filterwarnings("ignore", category=UserWarning, module="clamd")
 
 
 class AntivirusResult:
@@ -40,7 +37,7 @@ class Antivirus:
     """Provide a convenience interface to the local ClamAV daemon."""
 
     @staticmethod
-    def scan_stream(file_stream: Any) -> AntivirusResult:
+    def scan_stream(file_stream: Any, address: dict[str, str | int]) -> AntivirusResult:
         """Scan a binary file stream and return its status and details.
 
         The stream is passed to ClamAV's ``INSTREAM`` command. Connection,
@@ -48,8 +45,8 @@ class Antivirus:
         instead of being raised to the caller.
         """
         try:
-            clam = clamd.ClamdNetworkSocket(host="localhost", port=3310)
-            clam.reload()
+            clam = clamd.ClamdNetworkSocket(host=str(address["ip"]), port=int(address["port"]))
+            clam.reload()  # update the signature database
 
             scan_result = clam.instream(file_stream)
 

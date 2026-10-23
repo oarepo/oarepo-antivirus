@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 CESNET z.s.p.o.
 # SPDX-License-Identifier: MIT
 
-"""Verify ClamAV stream scanning for clean and infected sample files."""
+"""Verify ClamAV stream scanning for clean and infected sample data."""
 
 from __future__ import annotations
 
@@ -12,12 +12,14 @@ from oarepo_antivirus.services.files.antivirus_wrapper import Antivirus, Antivir
 if TYPE_CHECKING:
     from .conftest import OpenedFile
 
+from oarepo_antivirus.config import ANTIVIRUS_DAEMON_ADDRESS
+
 
 def test_antivirus_scan_stream_virus_free(
     innocent_file_fp: OpenedFile,
 ) -> None:
     """Return a clean result when ClamAV scans a harmless sample."""
-    result: AntivirusResult = Antivirus.scan_stream(innocent_file_fp)
+    result: AntivirusResult = Antivirus.scan_stream(innocent_file_fp, ANTIVIRUS_DAEMON_ADDRESS)
 
     assert result.is_ok
     assert result.details is None
@@ -27,7 +29,7 @@ def test_antivirus_scan_stream_virus_infected(
     virus_file_fp: OpenedFile,
 ) -> None:
     """Report the EICAR signature when ClamAV scans the test sample."""
-    result: AntivirusResult = Antivirus.scan_stream(virus_file_fp)
+    result: AntivirusResult = Antivirus.scan_stream(virus_file_fp, ANTIVIRUS_DAEMON_ADDRESS)
 
     assert not result.is_ok
     assert result.details is not None

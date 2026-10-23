@@ -27,3 +27,10 @@ class OARepoAntivirus:
         """Register this extension on ``app``."""
         self.app = app
         app.extensions["oarepo-antivirus"] = self
+        self.init_config(app)
+
+    def init_config(self, app: Flask) -> None:
+        """Initialize configuration."""
+        from . import config
+
+        app.config.setdefault("ANTIVIRUS_DAEMON_ADDRESS", config.ANTIVIRUS_DAEMON_ADDRESS)
