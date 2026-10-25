@@ -26,6 +26,9 @@ oarepo_antivirus_processor = "oarepo_antivirus.services.files.processors.antivir
 [project.entry-points."flask.commands"]
 antivirus = "oarepo_antivirus.cli:antivirus_cli"
 
+[project.entry-points."invenio_celery.tasks"]
+oarepo_antivirus = "oarepo_antivirus.tasks"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "/oarepo_antivirus",
