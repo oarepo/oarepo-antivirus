@@ -1,27 +1,58 @@
 from celery import shared_task
+from invenio_records_resources.records import FileRecord
+from invenio_records_resources.services import FileService
+from oarepo_runtime.proxies import current_runtime
 from flask import current_app
 from invenio_access.permissions import system_identity
-from oarepo_antivirus.services.files.antivirus_wrapper import Antivirus, AntivirusResult
+from invenio_rdm_records.records import RDMRecord
 from invenio_rdm_records.proxies import current_rdm_records_service
+from oarepo_antivirus.services.files.processors.antivirus import AntivirusFileProcessor
+from invenio_records_resources.services.uow import RecordCommitOp, UnitOfWork
+
+
+# --- helpers ----
+
+def print_scan_file_result(file_record: FileRecord) -> None:
+    metadata = file_record.metadata or {}
+    status = f"FAIL, details: {metadata['error']}" if metadata.get("error") else "OK"
+    print(f"  - {file_record.key}: {status}")
+
+
+# ----------------
+
 
 @shared_task()
 def record_scan(record_id: str):
     """Scan all files attached to a record."""
-    record_item = current_rdm_records_service.read(system_identity, record_id)
-    record = record_item._record
+    try:
+        record_item = current_rdm_records_service.read(system_identity, record_id)
+        record: RDMRecord = record_item._record
+        scan_files(record)
+    except Exception as e:
+        current_app.logger.error(e)
 
-    if not record.files:
-        print(f"The record {record_id} does not have any files.")
-        return
+def scan_files(record: RDMRecord) -> None:
+    # obtain AntivirusFileProcessor instance
+    file_service: FileService = current_runtime.get_file_service_for_record(record)
+    processor: AntivirusFileProcessor | None = next(
+        (
+            p for p in file_service.config.file_processors
+            if isinstance(p, AntivirusFileProcessor)
+        ),
+        None,
+    )
+    if processor is None:
+        raise RuntimeError("No AntivirusFileProcessor configured for this model")
 
-    antivirus_daemon_address = current_app.config.get("ANTIVIRUS_DAEMON_ADDRESS")
+    # scan the record's files
+    for file_key, file_record in record.files.items():
+        # process the file
+        processor.process(file_record)
 
-    print(f"Scanning all files for record: {record_id}")
-    for file_key, file_obj in record.files.items():
-        try:
-            stream = file_obj.get_stream("rb")
-            result: AntivirusResult = Antivirus.scan_stream(stream, antivirus_daemon_address)
-            status = "OK" if result.is_ok else f"FAILED, details: {result.details}"
-            print(f"  - {file_key}: {status}")
-        except Exception as e:
-            print(f"  - {file_key}: ERROR during scan ({e})")
+        # commit possible modifications
+        with UnitOfWork() as uow:
+            uow.register(RecordCommitOp(file_record))
+            uow.commit()
+
+        # print result
+        print_scan_file_result(file_record)

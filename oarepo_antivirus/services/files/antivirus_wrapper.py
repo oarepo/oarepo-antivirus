@@ -51,6 +51,8 @@ class Antivirus:
         The stream is passed to ClamAV's ``INSTREAM`` command. Connection,
         stream-size, and scanner errors are returned as an ``ERROR`` result
         instead of being raised to the caller.
+
+        Doesn't raise any exceptions
         """
         try:
             clam = clamd.ClamdNetworkSocket(host=str(address["ip"]), port=int(address["port"]))
@@ -66,4 +68,7 @@ class Antivirus:
             return AntivirusResult("ERROR", str(e))
 
         except clamd.ConnectionError as e:
+            return AntivirusResult("ERROR", str(e))
+
+        except Exception as e:
             return AntivirusResult("ERROR", str(e))
