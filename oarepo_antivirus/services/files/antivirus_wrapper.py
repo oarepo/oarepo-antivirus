@@ -48,27 +48,14 @@ class Antivirus:
     def scan_stream(file_stream: Any, address: dict[str, str | int]) -> AntivirusResult:
         """Scan a binary file stream and return its status and details.
 
-        The stream is passed to ClamAV's ``INSTREAM`` command. Connection,
-        stream-size, and scanner errors are returned as an ``ERROR`` result
-        instead of being raised to the caller.
-
-        Doesn't raise any exceptions
+        The stream is passed to ClamAV's ``INSTREAM`` command.
         """
-        try:
-            clam = clamd.ClamdNetworkSocket(host=str(address["ip"]), port=int(address["port"]))
-            clam.reload()  # update the signature database
 
-            scan_result = clam.instream(file_stream)
+        clam = clamd.ClamdNetworkSocket(host=str(address["ip"]), port=int(address["port"]))
+        clam.reload()  # update the signature database
 
-            # Parse the result dictionary, e.g., {'stream': ('OK', None)} or ('FOUND', 'Virus_Name')
-            status, details = scan_result.get("stream", ("ERROR", "Unknown error"))
-            return AntivirusResult(status, details)
+        scan_result = clam.instream(file_stream)
 
-        except clamd.BufferTooLongError as e:
-            return AntivirusResult("ERROR", str(e))
-
-        except clamd.ConnectionError as e:
-            return AntivirusResult("ERROR", str(e))
-
-        except Exception as e:
-            return AntivirusResult("ERROR", str(e))
+        # Parse the result dictionary, e.g., {'stream': ('OK', None)} or ('FOUND', 'Virus_Name')
+        status, details = scan_result.get("stream", ("ERROR", "Unknown error"))
+        return AntivirusResult(status, details)

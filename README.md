@@ -23,15 +23,15 @@ The package registers `AntivirusFileProcessor` through the `oarepo.file_processo
 
 ## Scan behavior
 
-For each file record, `AntivirusFileProcessor` opens the file as a binary stream and passes it to ClamAV. A result with status `OK` is treated as clean and no modifications are performed on the FileRecord instance. For any other result, the processor stores the scanner details in the FileRecord's metadata under `error`:
+For each file record, `AntivirusFileProcessor` opens the file as a binary stream and passes it to ClamAV. A result with status `OK` is treated as clean and leaves the FileRecord metadata unchanged. Any other ClamAV result stores its details in metadata under `malicious_code_detected`:
 
 ```json
 {
-  "error": "Eicar-Test-Signature"
+  "malicious_code_detected": "Eicar-Test-Signature"
 }
 ```
 
-The processor does not raise an exception for ClamAV connection or stream-size errors; the wrapper returns these as `ERROR` results, which are likewise recorded in metadata. The processor does not itself reject, quarantine, or delete a file. The host application can use the `error` metadata to apply its own policy.
+Exceptions raised while configuring the scanner, opening the stream, or communicating with ClamAV are caught and stored under `antivirus_error`. Existing metadata is preserved. The processor does not itself reject, quarantine, or delete a file; the host application must enforce any policy based on these metadata fields.
 
 The default scanner address is defined by `ANTIVIRUS_DAEMON_ADDRESS` in
 `oarepo_antivirus/config.py` (`127.0.0.1:3310`). To change the package default,
@@ -48,7 +48,17 @@ configuration, for example:
 ANTIVIRUS_DAEMON_ADDRESS = {"ip": "clamav", "port": 3310}
 ```
 
-The file processor reads this setting from the active Flask application when it scans a file. ClamAV is also asked to reload its signatures before each stream scan.
+The file processor reads this setting from the active Flask application when it scans a file. ClamAV is asked to reload its signatures before each stream scan.
+
+## Scan a record from the command line
+
+The package provides a Flask CLI command to enqueue a scan of all files attached to an RDM record. It runs through Celery, so a worker must be running:
+
+```bash
+flask antivirus scan record <record-id>
+```
+
+The command reports that the scan was enqueued; it does not wait for the scan to finish.
 
 ## Direct use
 
@@ -66,4 +76,4 @@ else:
     print(f"Scan reported: {result.details}")
 ```
 
-`Antivirus.scan_stream` returns an `AntivirusResult`. Its `is_ok` property is true only for a clean `OK` status, and `details` contains the scanner's detection name of case of some virus found or error message in case of some error occurred.
+`Antivirus.scan_stream` returns an `AntivirusResult`. Its `is_ok` property is true only for a clean `OK` status, and `details` contains the detection name or scanner response details when the status is not `OK`. Connection and stream exceptions are raised by the wrapper; the file processor catches them and records them as `antivirus_error`.
