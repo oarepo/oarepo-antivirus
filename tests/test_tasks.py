@@ -30,22 +30,28 @@ def _file_record(metadata: dict | None = None) -> MagicMock:
     return file_record
 
 
-def test_print_scan_file_result_reports_clean(capsys: pytest.CaptureFixture[str]) -> None:
+def test_print_scan_file_result_reports_clean(
+    app: Flask,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Print a clean result when no antivirus metadata is present."""
-    tasks.print_scan_file_result(_file_record())
+    caplog.set_level("INFO")
+    with app.app_context():
+        tasks.print_scan_file_result(_file_record())
 
-    assert "example.txt: OK" in capsys.readouterr().out
+    assert "example.txt: OK" in caplog.text
 
 
 def test_print_scan_file_result_reports_detection(
-    capsys: pytest.CaptureFixture[str],
+    app: Flask,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Print the detection details when a file is infected."""
-    tasks.print_scan_file_result(
-        _file_record({"antivirus_detected": "Eicar-Test-Signature"})
-    )
+    caplog.set_level("INFO")
+    with app.app_context():
+        tasks.print_scan_file_result(_file_record({"antivirus_detected": "Eicar-Test-Signature"}))
 
-    assert "FAIL, details: Eicar-Test-Signature" in capsys.readouterr().out
+    assert "FAIL, details: Eicar-Test-Signature" in caplog.text
 
 
 def test_scan_files_processes_and_commits_enabled_files(app: Flask) -> None:
@@ -54,6 +60,7 @@ def test_scan_files_processes_and_commits_enabled_files(app: Flask) -> None:
     record.files.enabled = True
     file_record = _file_record()
     record.files.items.return_value = [("example.txt", file_record)]
+    record.files.entries = {"example.txt": file_record}
     processor = AntivirusFileProcessor()
     processor.process = MagicMock()
     file_service = SimpleNamespace(config=SimpleNamespace(file_processors=[processor]))

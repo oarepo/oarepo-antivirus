@@ -5,13 +5,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
-import pytest
 from flask import Flask
 
 from oarepo_antivirus.services.files.antivirus_wrapper import AntivirusResult
 from oarepo_antivirus.services.files.processors.antivirus import AntivirusFileProcessor
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def test_can_process_accepts_any_file_record() -> None:

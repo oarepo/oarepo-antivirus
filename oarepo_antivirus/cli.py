@@ -3,6 +3,8 @@
 
 """Command-line interface for enqueueing antivirus scans."""
 
+from __future__ import annotations
+
 import click
 from flask.cli import with_appcontext
 
@@ -18,6 +20,7 @@ def antivirus_cli() -> None:
 def antivirus_scan_cli() -> None:
     """Provide commands for scanning records and files."""
 
+
 @antivirus_scan_cli.command("record")
 @click.argument("record_id")
 @with_appcontext
@@ -26,9 +29,10 @@ def scan_record(record_id: str) -> None:
     record_scan.delay(record_id)
     click.secho(f"Record '{record_id}' scan is being executed in Celery", fg="green")
 
+
 @antivirus_scan_cli.command("all")
 @with_appcontext
-def scan_record() -> None:
+def scan_all_records() -> None:
     """Enqueue a scan of all files in all published records."""
     scan_all.delay()
     click.secho("Scanning all files of all records in the system", fg="green")

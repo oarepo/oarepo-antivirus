@@ -41,7 +41,7 @@ class AntivirusFileProcessor(FileProcessor):
             if not antivirus_result.is_ok:
                 metadata["antivirus_detected"] = antivirus_result.details
 
-        except Exception as e:
-            current_app.logger.error(str(e))
+        except Exception:
+            current_app.logger.exception("An error occurred during file processing")
 
-        file_record.metadata = metadata
+        object.__setattr__(file_record, "metadata", metadata)
