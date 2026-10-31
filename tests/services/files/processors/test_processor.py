@@ -21,13 +21,20 @@ def test_can_process_accepts_any_file_record() -> None:
     assert processor.can_process(MagicMock())
 
 
-def test_process_fails_loudly_when_address_is_not_configured() -> None:
-    """Do not start a scan with an implicit or missing daemon address."""
+def test_process_logs_missing_address_without_changing_metadata(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log configuration errors without adding them to file metadata."""
     processor = AntivirusFileProcessor()
     app = Flask(__name__)
+    file_record = MagicMock()
+    file_record.metadata = None
 
-    with app.app_context(), pytest.raises(KeyError, match="ANTIVIRUS_DAEMON_ADDRESS"):
-        processor.process(MagicMock())
+    with app.app_context():
+        processor.process(file_record)
+
+    assert file_record.metadata == {}
+    assert "ANTIVIRUS_DAEMON_ADDRESS" in caplog.text
 
 
 def test_process_scans_stream_and_preserves_metadata(app: Flask) -> None:
@@ -52,7 +59,7 @@ def test_process_scans_stream_and_preserves_metadata(app: Flask) -> None:
     assert file_record.metadata == {"key": "value"}
 
 
-def test_process_stores_scan_error_in_metadata(app: Flask) -> None:
+def test_process_stores_detection_in_metadata(app: Flask) -> None:
     """A detection is stored in metadata without discarding existing values."""
     processor = AntivirusFileProcessor()
     file_record = MagicMock()
@@ -70,7 +77,7 @@ def test_process_stores_scan_error_in_metadata(app: Flask) -> None:
 
     assert file_record.metadata == {
         "key": "value",
-        "error": "Eicar-Test-Signature",
+        "antivirus_detected": "Eicar-Test-Signature",
     }
 
 
@@ -90,4 +97,27 @@ def test_process_initializes_metadata_when_missing(app: Flask) -> None:
     ):
         processor.process(file_record)
 
-    assert file_record.metadata == {"error": "Scanner unavailable"}
+    assert file_record.metadata == {"antivirus_detected": "Scanner unavailable"}
+
+
+def test_process_logs_scan_exception_without_changing_metadata(
+    app: Flask,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Log scanner exceptions without adding them to file metadata."""
+    processor = AntivirusFileProcessor()
+    file_record = MagicMock()
+    file_record.get_stream.return_value.__enter__.return_value = MagicMock()
+    file_record.metadata = {"key": "value"}
+
+    with (
+        patch(
+            "oarepo_antivirus.services.files.processors.antivirus.Antivirus.scan_stream",
+            side_effect=OSError("Scanner unavailable"),
+        ),
+        app.app_context(),
+    ):
+        processor.process(file_record)
+
+    assert file_record.metadata == {"key": "value"}
+    assert "Scanner unavailable" in caplog.text

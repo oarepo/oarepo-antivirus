@@ -4,3 +4,5 @@
 """Test suite for OARepo Antivirus."""
 
 from __future__ import annotations
+
+"""Test suite for OARepo Antivirus."""

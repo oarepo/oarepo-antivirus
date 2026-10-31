@@ -39,9 +39,9 @@ class AntivirusFileProcessor(FileProcessor):
                 antivirus_result: AntivirusResult = Antivirus.scan_stream(stream, address)
 
             if not antivirus_result.is_ok:
-                metadata["malicious_code_detected"] = antivirus_result.details
+                metadata["antivirus_detected"] = antivirus_result.details
 
         except Exception as e:
-            metadata["antivirus_error"] = str(e)
+            current_app.logger.error(str(e))
 
         file_record.metadata = metadata

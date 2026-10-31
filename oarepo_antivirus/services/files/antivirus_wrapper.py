@@ -50,7 +50,6 @@ class Antivirus:
 
         The stream is passed to ClamAV's ``INSTREAM`` command.
         """
-
         clam = clamd.ClamdNetworkSocket(host=str(address["ip"]), port=int(address["port"]))
         clam.reload()  # update the signature database
 

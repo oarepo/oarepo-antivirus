@@ -1,6 +1,6 @@
 # OARepo Antivirus
 
-`oarepo-antivirus` adds ClamAV scanning to file processing in an OARepo application. Its registered file processor scans uploaded file streams and records scan failures or detections in the file record metadata.
+`oarepo-antivirus` adds ClamAV scanning to file processing in an OARepo application. Its registered file processor accepts every file record, scans its stream, and records detections in the file record metadata.
 
 ## Requirements
 
@@ -23,15 +23,15 @@ The package registers `AntivirusFileProcessor` through the `oarepo.file_processo
 
 ## Scan behavior
 
-For each file record, `AntivirusFileProcessor` opens the file as a binary stream and passes it to ClamAV. A result with status `OK` is treated as clean and leaves the FileRecord metadata unchanged. Any other ClamAV result stores its details in metadata under `malicious_code_detected`:
+For each file record, `AntivirusFileProcessor` opens the file as a binary stream and passes it to ClamAV using the `INSTREAM` command. ClamAV signatures are reloaded before each scan. A result with status `OK` is treated as clean and leaves the FileRecord metadata unchanged. Any other result stores its details in metadata under `antivirus_detected`:
 
 ```json
 {
-  "malicious_code_detected": "Eicar-Test-Signature"
+  "antivirus_detected": "Eicar-Test-Signature"
 }
 ```
 
-Exceptions raised while configuring the scanner, opening the stream, or communicating with ClamAV are caught and stored under `antivirus_error`. Existing metadata is preserved. The processor does not itself reject, quarantine, or delete a file; the host application must enforce any policy based on these metadata fields.
+Exceptions raised while configuring the scanner, opening the stream, or communicating with ClamAV are caught and logged by the processor. Existing metadata is preserved. The processor does not itself reject, quarantine, or delete a file; the host application must enforce any policy based on `antivirus_detected`.
 
 The default scanner address is defined by `ANTIVIRUS_DAEMON_ADDRESS` in
 `oarepo_antivirus/config.py` (`127.0.0.1:3310`). To change the package default,
@@ -60,6 +60,22 @@ flask antivirus scan record <record-id>
 
 The command reports that the scan was enqueued; it does not wait for the scan to finish.
 
+## Scan all records from the command line
+
+To enqueue a scan of all published records from all registered OARepo RDM
+metadata models:
+
+```bash
+flask antivirus scan all
+```
+
+The task iterates `current_runtime.models`, selects each model whose service is
+an `RDMRecordService`, and scans its records through that model's own service.
+It therefore covers multiple metadata models and their separate indexes; it
+does not use one global `current_rdm_records_service`. Records with files
+disabled are skipped. Draft records and media-file services are not included.
+The command requires a running Celery worker.
+
 ## Direct use
 
 The scanner wrapper can also be used without the file processor:
@@ -76,4 +92,4 @@ else:
     print(f"Scan reported: {result.details}")
 ```
 
-`Antivirus.scan_stream` returns an `AntivirusResult`. Its `is_ok` property is true only for a clean `OK` status, and `details` contains the detection name or scanner response details when the status is not `OK`. Connection and stream exceptions are raised by the wrapper; the file processor catches them and records them as `antivirus_error`.
+`Antivirus.scan_stream` returns an `AntivirusResult`. Its `is_ok` property is true only for a clean `OK` status, and `details` contains the detection name or scanner response details when the status is not `OK`. Connection and stream exceptions are raised by the wrapper; the file processor catches and logs them.
