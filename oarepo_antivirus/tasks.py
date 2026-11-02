@@ -16,6 +16,7 @@ from invenio_rdm_records.services import RDMRecordService
 from invenio_records_resources.services.uow import RecordCommitOp, UnitOfWork
 from oarepo_runtime.proxies import current_runtime
 from oarepo_runtime.typing import record_from_result
+from invenio_notifications.tasks import broadcast_notification
 
 from oarepo_antivirus.services.files.processors.antivirus import AntivirusFileProcessor
 
