@@ -19,7 +19,7 @@ Install the package in the environment used by the OARepo application:
 uv pip install oarepo-antivirus
 ```
 
-The package registers `AntivirusFileProcessor` through the `oarepo.file_processors` entry point. In an application that discovers OARepo file processor entry points, no additional processor registration is needed. The Flask extension is also registered through the standard Invenio application entry points.
+The package registers `AntivirusFileProcessor` through the `oarepo.file_processors` entry point. In an application that discovers OARepo file processor entry points.
 
 ## Scan behavior
 
@@ -50,12 +50,28 @@ ANTIVIRUS_DAEMON_ADDRESS = {"ip": "clamav", "port": 3310}
 
 The file processor reads this setting from the active Flask application when it scans a file. ClamAV is asked to reload its signatures before each stream scan.
 
-## Scan a record from the command line
+## Testing
 
-The package provides a Flask CLI command to enqueue a scan of all files attached to an RDM record. It runs through Celery, so a worker must be running:
+Before running the tests, start the ClamAV test service by executing the Docker
+Compose setup script:
 
 ```bash
-flask antivirus scan record <record-id>
+tests/docker/test-setup.sh start
+```
+
+The script uses `tests/docker/docker-compose.yaml` to start the service. Stop
+the service after testing with:
+
+```bash
+tests/docker/test-setup.sh stop
+```
+
+## Scan a record from the command line
+
+The package provides an Invenio CLI command to enqueue a scan of all files attached to an RDM record. It runs through Celery, so a worker must be running:
+
+```bash
+invenio antivirus scan record <record-id>
 ```
 
 The command reports that the scan was enqueued; it does not wait for the scan to finish.
@@ -66,14 +82,13 @@ To enqueue a scan of all published records from all registered OARepo RDM
 metadata models:
 
 ```bash
-flask antivirus scan all
+invenio antivirus scan all
 ```
 
 The task iterates `current_runtime.models`, selects each model whose service is
 an `RDMRecordService`, and scans its records through that model's own service.
-It therefore covers multiple metadata models and their separate indexes; it
-does not use one global `current_rdm_records_service`. Records with files
-disabled are skipped. Draft records and media-file services are not included.
+It therefore covers multiple metadata models.
+Records with files disabled are skipped. Draft records and media-file services are not included.
 The command requires a running Celery worker.
 
 ## Direct use

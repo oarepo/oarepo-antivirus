@@ -1,0 +1,12 @@
+version: "1.0"
+name: "oarepo-antivirus"
+
+
+services:
+  clamav:
+    image: clamav/clamav:latest
+    container_name: clamav-server
+    platform: linux/amd64
+    ports:
+      - "3310:3310"
+    restart: unless-stopped
