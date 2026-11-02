@@ -27,7 +27,10 @@ def test_can_process_accepts_any_file_record() -> None:
 def test_process_logs_missing_address_without_changing_metadata(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Log configuration errors without adding them to file metadata."""
+    """Log configuration errors without adding them to file metadata.
+
+    Here it raises Exception when the configuration for antivirus is missing.
+    """
     processor = AntivirusFileProcessor()
     app = Flask(__name__)
     file_record = MagicMock()

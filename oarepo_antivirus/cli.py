@@ -33,6 +33,6 @@ def scan_record(record_id: str) -> None:
 @antivirus_scan_cli.command("all")
 @with_appcontext
 def scan_all_records() -> None:
-    """Enqueue a scan of all files in all published records."""
+    """Scan of all files in all published records."""
     scan_all.delay()
     click.secho("Scanning all files of all records in the system", fg="green")

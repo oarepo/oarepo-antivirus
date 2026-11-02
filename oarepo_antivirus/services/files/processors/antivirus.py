@@ -29,7 +29,10 @@ class AntivirusFileProcessor(FileProcessor):
 
     @override
     def process(self, file_record: FileRecord) -> None:
-        """Run this processor for ``file_record``."""
+        """Run this processor for ``file_record``.
+
+        This method modifies the record's ``metadata`` in case of malware detection.
+        """
         metadata = file_record.metadata or {}
 
         try:

@@ -21,8 +21,8 @@ with warnings.catch_warnings(record=False):
 class AntivirusResult:
     """Represent a ClamAV scan status and its optional details.
 
-    A status of ``OK`` indicates a clean scan; other statuses can represent a
-    detection or a scanner error.
+    A status of ``OK`` indicates a clean scan; other statuses represent a
+    detection of malware. In that case it is possible to get the details via property ``details``.
     """
 
     def __init__(self, status: str, details: str | None):
@@ -37,7 +37,7 @@ class AntivirusResult:
 
     @property
     def details(self) -> str | None:
-        """Return scanner details, such as a detection name or error message."""
+        """Return scanner details, such as a detection name."""
         return self._details
 
 

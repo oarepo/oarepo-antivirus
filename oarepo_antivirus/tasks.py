@@ -54,9 +54,7 @@ def scan_files(record: RDMRecord) -> None:
     if processor is None:
         raise RuntimeError("No AntivirusFileProcessor configured for this model")
 
-    # A single record index can contain models with files disabled. Accessing
-    # their file mapping raises InvalidOperationError, so skip metadata-only
-    # records before iterating it.
+    # A single record index can contain models with files disabled.
     files = record.files
     if not files.enabled:
         current_app.logger.info(
