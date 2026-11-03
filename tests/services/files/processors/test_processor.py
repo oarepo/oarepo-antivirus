@@ -24,10 +24,10 @@ def test_can_process_accepts_any_file_record() -> None:
     assert processor.can_process(MagicMock())
 
 
-def test_process_logs_missing_address_without_changing_metadata(
+def test_process_logs_missing_address_and_records_error(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Log configuration errors without adding them to file metadata.
+    """Log configuration errors and add a notification-worthy metadata field.
 
     Here it raises Exception when the configuration for antivirus is missing.
     """
@@ -39,7 +39,7 @@ def test_process_logs_missing_address_without_changing_metadata(
     with app.app_context():
         processor.process(file_record)
 
-    assert file_record.metadata == {}
+    assert file_record.metadata == {"antivirus_error": "Antivirus scan could not be completed."}
     assert "ANTIVIRUS_DAEMON_ADDRESS" in caplog.text
 
 
@@ -106,11 +106,11 @@ def test_process_initializes_metadata_when_missing(app: Flask) -> None:
     assert file_record.metadata == {"antivirus_detected": "Scanner unavailable"}
 
 
-def test_process_logs_scan_exception_without_changing_metadata(
+def test_process_logs_scan_exception_and_records_error(
     app: Flask,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Log scanner exceptions without adding them to file metadata."""
+    """Log scanner exceptions and add a notification-worthy metadata field."""
     processor = AntivirusFileProcessor()
     file_record = MagicMock()
     file_record.get_stream.return_value.__enter__.return_value = MagicMock()
@@ -125,5 +125,8 @@ def test_process_logs_scan_exception_without_changing_metadata(
     ):
         processor.process(file_record)
 
-    assert file_record.metadata == {"key": "value"}
+    assert file_record.metadata == {
+        "key": "value",
+        "antivirus_error": "Antivirus scan could not be completed.",
+    }
     assert "Scanner unavailable" in caplog.text

@@ -1,0 +1,20 @@
+{%- block subject -%}
+    {{ _("Antivirus scan failed for record %(record_id)s", record_id=notification.context.record_id) }}
+{%- endblock subject -%}
+
+{%- block html_body -%}
+<p>{{ _("The antivirus scan found a problem with files in record %(record_id)s.", record_id=notification.context.record_id) }}</p>
+<ul>
+{% for finding in notification.context.findings %}
+    <li><strong>{{ finding.file }}</strong>: {{ finding.details }}</li>
+{% endfor %}
+</ul>
+{%- endblock html_body -%}
+
+{%- block plain_body -%}
+{{ _("The antivirus scan found a problem with files in record %(record_id)s.", record_id=notification.context.record_id) }}
+
+{% for finding in notification.context.findings %}
+- {{ finding.file }}: {{ finding.details }}
+{% endfor %}
+{%- endblock plain_body -%}

@@ -5,7 +5,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
+
+from jinja2 import ChoiceLoader, FileSystemLoader
 
 if TYPE_CHECKING:
     from flask import Flask
@@ -27,10 +30,24 @@ class OARepoAntivirus:
         """Register this extension on ``app``."""
         self.app = app
         app.extensions["oarepo-antivirus"] = self
+
+        # load ui
+        app.jinja_loader = ChoiceLoader(
+            [
+                app.jinja_loader,
+                FileSystemLoader(str(Path(__file__).parent / "templates")),
+            ]
+        )
         self.init_config(app)
 
     def init_config(self, app: Flask) -> None:
         """Initialize configuration."""
         from . import config
+        from .notifications import AntivirusScanFailureNotificationBuilder
 
         app.config.setdefault("ANTIVIRUS_DAEMON_ADDRESS", config.ANTIVIRUS_DAEMON_ADDRESS)
+        builders = app.config.setdefault("NOTIFICATIONS_BUILDERS", {})
+        builders.setdefault(
+            AntivirusScanFailureNotificationBuilder.type,
+            AntivirusScanFailureNotificationBuilder,
+        )

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, override
 from flask import current_app
 from invenio_records_resources.services.files.processors import FileProcessor
 
+from ....notifications import notify_scan_failure
 from ..antivirus_wrapper import Antivirus, AntivirusResult
 
 if TYPE_CHECKING:
@@ -43,6 +44,7 @@ class AntivirusFileProcessor(FileProcessor):
 
             if not antivirus_result.is_ok:
                 metadata["antivirus_detected"] = antivirus_result.details
+                notify_scan_failure(file_record, str(antivirus_result.details))
 
         except Exception:
             current_app.logger.exception("An error occurred during file processing")

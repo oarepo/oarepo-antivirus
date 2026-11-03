@@ -177,7 +177,7 @@ def test_scan_all_scans_all_rdm_models(app: Flask) -> None:
         ) as scan_files,
     ):
         runtime.models = {"datasets": rdm_model, "other": other_model}
-        tasks.scan_all.run()
+        tasks.record_scan_all.run()
 
     service.scan.assert_called_once_with(tasks.system_identity)
     service.read.assert_called_once_with(tasks.system_identity, "record-id")
@@ -195,6 +195,6 @@ def test_scan_all_logs_errors(app: Flask, caplog: pytest.LogCaptureFixture) -> N
         patch.object(tasks, "current_runtime", new=MagicMock()) as runtime,
     ):
         runtime.models = {"datasets": SimpleNamespace(service=service)}
-        tasks.scan_all.run()
+        tasks.record_scan_all.run()
 
     assert "scan failed" in caplog.text

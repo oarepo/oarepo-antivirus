@@ -16,7 +16,6 @@ from invenio_rdm_records.services import RDMRecordService
 from invenio_records_resources.services.uow import RecordCommitOp, UnitOfWork
 from oarepo_runtime.proxies import current_runtime
 from oarepo_runtime.typing import record_from_result
-from invenio_notifications.tasks import broadcast_notification
 
 from oarepo_antivirus.services.files.processors.antivirus import AntivirusFileProcessor
 
@@ -35,7 +34,7 @@ def print_scan_file_result(file_record: FileRecord) -> None:
     # get the details
     details: str | None = None
     if metadata.get("antivirus_detected", False) or metadata.get("antivirus_error", False):
-        details = metadata.get("antivirus_detected")
+        details = metadata.get("antivirus_detected") or metadata.get("antivirus_error")
 
     # print the status
     status = f"FAIL, details: {details}" if details else "OK"
@@ -93,18 +92,12 @@ def record_scan(record_id: str) -> None:
 
 
 @shared_task()
-def scan_all() -> None:
+def record_scan_all() -> None:
     """Scan all files attached to all published records."""
     try:
-        for model in current_runtime.models.values():
-            service = model.service
 
-            if not isinstance(service, RDMRecordService):
-                continue
+        for record in current_rdm_records_service.scan(system_identity):
+            record_scan(record["id"])
 
-            for hit in service.scan(system_identity):
-                record_item = service.read(system_identity, hit["id"])
-                record = record_from_result(record_item, RDMRecord)
-                scan_files(record)
     except Exception:
         current_app.logger.exception("An error occurred during file scanning")

@@ -8,7 +8,7 @@ from __future__ import annotations
 import click
 from flask.cli import with_appcontext
 
-from .tasks import record_scan, scan_all
+from .tasks import record_scan, record_scan_all
 
 
 @click.group("antivirus")
@@ -32,7 +32,7 @@ def scan_record(record_id: str) -> None:
 
 @antivirus_scan_cli.command("all")
 @with_appcontext
-def scan_all_records() -> None:
+def scan_record_all() -> None:
     """Scan of all files in all published records."""
-    scan_all.delay()
+    record_scan_all.delay()
     click.secho("Scanning all files of all records in the system", fg="green")

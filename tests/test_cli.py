@@ -37,7 +37,7 @@ def test_scan_all_enqueues_all_records_task() -> None:
     app = _app()
     runner = app.test_cli_runner()
 
-    with patch("oarepo_antivirus.cli.scan_all.delay") as delay:
+    with patch("oarepo_antivirus.cli.record_scan_all.delay") as delay:
         result = runner.invoke(app.cli, ["antivirus", "scan", "all"])
 
     assert result.exit_code == 0

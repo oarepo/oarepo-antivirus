@@ -91,6 +91,14 @@ It therefore covers multiple metadata models.
 Records with files disabled are skipped. Draft records and media-file services are not included.
 The command requires a running Celery worker.
 
+## Antivirus notifications
+
+The package emits an `antivirus-scan.failure` notification to the user who
+uploaded the record when a scan detects a threat or cannot contact the scanner.
+The application must have the standard Invenio Notifications email backend,
+Celery, and mail settings configured. No notification is sent if the record
+owner cannot be resolved or has no email address.
+
 ## Direct use
 
 The scanner wrapper can also be used without the file processor:
