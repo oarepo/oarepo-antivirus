@@ -11,6 +11,7 @@ license = "MIT"
 requires-python = ">=3.14,<3.15"
 dependencies = [
     "oarepo[rdm,tests]>=14.0.0dev0,<15.0.0",
+    "oarepo-runtime>=7.13.0,<8.0.0",
     "clamd==1.0.2"
 ]
 
@@ -23,12 +24,13 @@ oarepo_antivirus = "oarepo_antivirus.ext:OARepoAntivirus"
 [project.entry-points."oarepo.file_processors"]
 oarepo_antivirus_processor = "oarepo_antivirus.services.files.processors.antivirus:AntivirusFileProcessor"
 
+[project.entry-points."flask.commands"]
+antivirus = "oarepo_antivirus.cli:antivirus_cli"
+
+[project.entry-points."invenio_celery.tasks"]
+oarepo_antivirus = "oarepo_antivirus.tasks"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "/oarepo_antivirus",
-]
-
-[tool.pytest.ini_options]
-filterwarnings = [
-    "ignore:pkg_resources is deprecated as an API:UserWarning",
 ]

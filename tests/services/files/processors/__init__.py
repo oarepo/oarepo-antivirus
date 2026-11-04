@@ -4,3 +4,5 @@
 """Tests for file processor implementations."""
 
 from __future__ import annotations
+
+"""Tests for antivirus file processors."""

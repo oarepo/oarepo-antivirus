@@ -29,14 +29,22 @@ class AntivirusFileProcessor(FileProcessor):
 
     @override
     def process(self, file_record: FileRecord) -> None:
-        """Run this processor for ``file_record``."""
-        address = current_app.config["ANTIVIRUS_DAEMON_ADDRESS"]
-        with file_record.get_stream("rb") as stream:
-            antivirus_result: AntivirusResult = Antivirus.scan_stream(stream, address)
+        """Run this processor for ``file_record``.
 
+        This method modifies the record's ``metadata`` in case of malware detection.
+        """
         metadata = file_record.metadata or {}
 
-        if not antivirus_result.is_ok:
-            metadata["error"] = antivirus_result.details
+        try:
+            address = current_app.config["ANTIVIRUS_DAEMON_ADDRESS"]
 
-        file_record.metadata = metadata
+            with file_record.get_stream("rb") as stream:
+                antivirus_result: AntivirusResult = Antivirus.scan_stream(stream, address)
+
+            if not antivirus_result.is_ok:
+                metadata["antivirus_detected"] = antivirus_result.details
+
+        except Exception:
+            current_app.logger.exception("An error occurred during file processing")
+
+        object.__setattr__(file_record, "metadata", metadata)
