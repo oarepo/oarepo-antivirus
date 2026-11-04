@@ -37,13 +37,7 @@ class AntivirusScanFailureNotificationBuilder(NotificationBuilder):
 
     @classmethod
     @override
-    def build(
-            cls,
-            *,
-            record_id: str,
-            findings: list[dict[str, str]],
-            owner_email: str,
-    ) -> Notification:
+    def build(cls, *, record_id: str, findings: list[dict[str, str]], owner_email: str) -> Notification:
         """Build a serializable notification for a scanned record."""
         return Notification(
             type=cls.type,
@@ -62,9 +56,8 @@ def notify_scan_failure(file_record: FileRecord, details: str) -> None:
     """Notify the uploader when a file scan reports a failure."""
     try:
         record = file_record.record
-        user_id: int = record.parent.access.owned_by.owner_id
-        user: User = current_datastore.get_user(user_id)
-        record_id: str = record.pid.pid_value
+        user: User = record.parent.access.owned_by.resolve()
+        record_id: str = str(record.pid.pid_value)
 
 
         if user is None or not user.email:
@@ -74,16 +67,12 @@ def notify_scan_failure(file_record: FileRecord, details: str) -> None:
             )
             return
 
-        notification = AntivirusScanFailureNotificationBuilder.build(
-            record_id=str(record_id),
-            findings=[
-                {
-                    "file": str(getattr(file_record, "key", "<unknown>")),
-                    "details": details,
-                }
-            ],
-            owner_email=user.email,
-        )
+        notification = AntivirusScanFailureNotificationBuilder.build(record_id=str(record_id), findings=[
+            {
+                "file": str(getattr(file_record, "key", "<unknown>")),
+                "details": details,
+            }
+        ], owner_email=user.email)
         # NotificationManager.broadcast() currently calls a validate() method
         # that is absent in the installed invenio-notifications version. Queue
         # the same task directly; it accepts the serialized notification.

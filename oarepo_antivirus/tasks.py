@@ -12,7 +12,7 @@ from flask import current_app
 from invenio_access.permissions import system_identity
 from invenio_rdm_records.proxies import current_rdm_records_service
 from invenio_rdm_records.records import RDMRecord
-from invenio_rdm_records.services import RDMRecordService
+from invenio_records_resources.services.records.results import RecordItem
 from invenio_records_resources.services.uow import RecordCommitOp, UnitOfWork
 from oarepo_runtime.proxies import current_runtime
 from oarepo_runtime.typing import record_from_result
@@ -55,7 +55,7 @@ def scan_files(record: RDMRecord) -> None:
         raise RuntimeError("No AntivirusFileProcessor configured for this model")
 
     # A single record index can contain models with files disabled.
-    files = record.files
+    files: FilesManager = record.files
     if not files.enabled:
         current_app.logger.info(
             "Skipping record %s: files are not enabled",
@@ -84,8 +84,8 @@ def scan_files(record: RDMRecord) -> None:
 def record_scan(record_id: str) -> None:
     """Scan all files attached to a record."""
     try:
-        record_item = current_rdm_records_service.read(system_identity, record_id)
-        record = record_from_result(record_item, RDMRecord)
+        record_item: RecordItem = current_rdm_records_service.read(system_identity, record_id)
+        record: RDMRecord = record_from_result(record_item, RDMRecord)
         scan_files(record)
     except Exception:
         current_app.logger.exception("An error occurred during file scanning")
