@@ -5,40 +5,54 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, override
 
 from flask import current_app
-from invenio_accounts.proxies import current_datastore
 from invenio_notifications.models import Notification, Recipient
-from invenio_notifications.tasks import broadcast_notification
 from invenio_notifications.services.builders import NotificationBuilder
-from invenio_notifications.services.generators import UserEmailBackend
-from invenio_records_resources.records import FileRecord
-from invenio_accounts.models import User
+from invenio_notifications.services.generators import (
+    EmailBackendGenerator,
+    RecipientGenerator,
+)
+from invenio_notifications.tasks import broadcast_notification
 
-class OwnerRecipient:
-    """Generate the record owner's recipient from the notification context."""
+if TYPE_CHECKING:
+    from invenio_records_resources.records import FileRecord
 
+
+class ContextEmailRecipient(RecipientGenerator):
+    """Add a recipient whose email address is stored in the notification context."""
+
+    def __init__(self, key: str):
+        self._key = key
+
+    @override
     def __call__(
-            self,
-            notification: Notification,
-            recipients: dict[str, Recipient],
+        self,
+        notification: Notification,
+        recipients: dict[str, Recipient],
     ) -> dict[str, Recipient]:
-        """Add the record owner as a recipient."""
-        email = notification.context["owner_email"]
-        recipients[email] = Recipient(data={"email": email})
+        email = notification.context.get(self._key)
+        if email:
+            recipients[email] = Recipient(data={"email": email})
         return recipients
 
 
 class AntivirusScanFailureNotificationBuilder(NotificationBuilder):
-    """Build notifications for files rejected or not verified by antivirus."""
+    """Notify the record owner about files rejected or not verified by antivirus."""
 
     type = "antivirus-scan.failure"
 
     @classmethod
     @override
-    def build(cls, *, record_id: str, findings: list[dict[str, str]], owner_email: str) -> Notification:
-        """Build a serializable notification for a scanned record."""
+    def build(
+        cls,
+        *,
+        record_id: str,
+        findings: list[dict[str, str]],
+        owner_email: str,
+    ) -> Notification:
+        """Build a serializable notification (it is processed in a Celery task)."""
         return Notification(
             type=cls.type,
             context={
@@ -48,31 +62,34 @@ class AntivirusScanFailureNotificationBuilder(NotificationBuilder):
             },
         )
 
-    recipients: ClassVar = [OwnerRecipient()]
-    recipient_backends: ClassVar = [UserEmailBackend()]
+    recipients: ClassVar = [ContextEmailRecipient(key="owner_email")]
+    recipient_backends: ClassVar = [EmailBackendGenerator()]
 
 
 def notify_scan_failure(file_record: FileRecord, details: str) -> None:
-    """Notify the uploader when a file scan reports a failure."""
+    """Notify the record owner when a file scan reports a failure."""
+    file_key = str(getattr(file_record, "key", "<unknown>"))
     try:
         record = file_record.record
-        user: User = record.parent.access.owned_by.resolve()
-        record_id: str = str(record.pid.pid_value)
+        record_id = str(record.pid.pid_value)
 
+        owner = record.parent.access.owned_by
+        user = owner.resolve() if owner is not None else None
+        owner_email = getattr(user, "email", None)
 
-        if user is None or not user.email:
+        if not owner_email:
             current_app.logger.warning(
                 "Antivirus finding for record %s was not notified: owner has no email",
                 record_id,
             )
             return
 
-        notification = AntivirusScanFailureNotificationBuilder.build(record_id=str(record_id), findings=[
-            {
-                "file": str(getattr(file_record, "key", "<unknown>")),
-                "details": details,
-            }
-        ], owner_email=user.email)
+        notification = AntivirusScanFailureNotificationBuilder.build(
+            record_id=record_id,
+            findings=[{"file": file_key, "details": details}],
+            owner_email=owner_email,
+        )
+
         # NotificationManager.broadcast() currently calls a validate() method
         # that is absent in the installed invenio-notifications version. Queue
         # the same task directly; it accepts the serialized notification.
@@ -80,6 +97,6 @@ def notify_scan_failure(file_record: FileRecord, details: str) -> None:
     except Exception:
         current_app.logger.warning(
             "Antivirus finding for file %s could not be notified",
-            getattr(file_record, "key", "<unknown>"),
+            file_key,
             exc_info=True,
         )

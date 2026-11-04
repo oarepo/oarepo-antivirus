@@ -30,14 +30,6 @@ class OARepoAntivirus:
         """Register this extension on ``app``."""
         self.app = app
         app.extensions["oarepo-antivirus"] = self
-
-        # load ui
-        app.jinja_loader = ChoiceLoader(
-            [
-                app.jinja_loader,
-                FileSystemLoader(str(Path(__file__).parent / "templates")),
-            ]
-        )
         self.init_config(app)
 
     def init_config(self, app: Flask) -> None:

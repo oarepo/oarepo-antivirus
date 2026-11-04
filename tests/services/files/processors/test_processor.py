@@ -24,10 +24,10 @@ def test_can_process_accepts_any_file_record() -> None:
     assert processor.can_process(MagicMock())
 
 
-def test_process_logs_missing_address_and_records_error(
+def test_process_logs_missing_address_without_adding_metadata(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Log configuration errors and add a notification-worthy metadata field.
+    """Do not log configuration errors and do not add a notification-worthy metadata field.
 
     Here it raises Exception when the configuration for antivirus is missing.
     """
@@ -39,7 +39,7 @@ def test_process_logs_missing_address_and_records_error(
     with app.app_context():
         processor.process(file_record)
 
-    assert file_record.metadata == {"antivirus_error": "Antivirus scan could not be completed."}
+    assert file_record.metadata == {}
     assert "ANTIVIRUS_DAEMON_ADDRESS" in caplog.text
 
 
@@ -66,7 +66,7 @@ def test_process_scans_stream_and_preserves_metadata(app: Flask) -> None:
 
 
 def test_process_stores_detection_in_metadata(app: Flask) -> None:
-    """A detection is stored in metadata without discarding existing values."""
+    """A detection is stored and reported without discarding existing metadata."""
     processor = AntivirusFileProcessor()
     file_record = MagicMock()
     file_record.get_stream.return_value.__enter__.return_value = MagicMock()
@@ -77,6 +77,9 @@ def test_process_stores_detection_in_metadata(app: Flask) -> None:
             "oarepo_antivirus.services.files.processors.antivirus.Antivirus.scan_stream",
             return_value=AntivirusResult("FOUND", "Eicar-Test-Signature"),
         ),
+        patch(
+            "oarepo_antivirus.services.files.processors.antivirus.notify_scan_failure",
+        ) as notify_scan_failure,
         app.app_context(),
     ):
         processor.process(file_record)
@@ -85,6 +88,7 @@ def test_process_stores_detection_in_metadata(app: Flask) -> None:
         "key": "value",
         "antivirus_detected": "Eicar-Test-Signature",
     }
+    notify_scan_failure.assert_called_once_with(file_record, "Eicar-Test-Signature")
 
 
 def test_process_initializes_metadata_when_missing(app: Flask) -> None:
@@ -99,18 +103,22 @@ def test_process_initializes_metadata_when_missing(app: Flask) -> None:
             "oarepo_antivirus.services.files.processors.antivirus.Antivirus.scan_stream",
             return_value=AntivirusResult("ERROR", "Scanner unavailable"),
         ),
+        patch(
+            "oarepo_antivirus.services.files.processors.antivirus.notify_scan_failure",
+        ) as notify_scan_failure,
         app.app_context(),
     ):
         processor.process(file_record)
 
     assert file_record.metadata == {"antivirus_detected": "Scanner unavailable"}
+    notify_scan_failure.assert_called_once_with(file_record, "Scanner unavailable")
 
 
-def test_process_logs_scan_exception_and_records_error(
+def test_process_logs_scan_exception_without_changing_metadata(
     app: Flask,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Log scanner exceptions and add a notification-worthy metadata field."""
+    """Log scanner exceptions without adding a detection or error metadata field."""
     processor = AntivirusFileProcessor()
     file_record = MagicMock()
     file_record.get_stream.return_value.__enter__.return_value = MagicMock()
@@ -121,12 +129,13 @@ def test_process_logs_scan_exception_and_records_error(
             "oarepo_antivirus.services.files.processors.antivirus.Antivirus.scan_stream",
             side_effect=OSError("Scanner unavailable"),
         ),
+        patch(
+            "oarepo_antivirus.services.files.processors.antivirus.notify_scan_failure",
+        ) as notify_scan_failure,
         app.app_context(),
     ):
         processor.process(file_record)
 
-    assert file_record.metadata == {
-        "key": "value",
-        "antivirus_error": "Antivirus scan could not be completed.",
-    }
+    assert file_record.metadata == {"key": "value"}
     assert "Scanner unavailable" in caplog.text
+    notify_scan_failure.assert_not_called()
