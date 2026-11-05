@@ -7,12 +7,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from oarepo_antivirus.config import ANTIVIRUS_DAEMON_ADDRESS
 from oarepo_antivirus.services.files.antivirus_wrapper import Antivirus, AntivirusResult
 
 if TYPE_CHECKING:
     from .conftest import OpenedFile
-
-from oarepo_antivirus.config import ANTIVIRUS_DAEMON_ADDRESS
 
 
 def test_antivirus_scan_stream_virus_free(

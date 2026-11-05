@@ -2,7 +2,7 @@
 
 `oarepo-antivirus` adds ClamAV scanning to file processing in an OARepo
 application. It provides a file processor, notification delivery for detected
-files, and CLI commands for scanning records.
+files, and CLI commands for scanning RDM-based Records.
 
 ## Requirements
 
@@ -23,8 +23,7 @@ uv pip install oarepo-antivirus
 ```
 
 The package registers `AntivirusFileProcessor` through the
-`oarepo.file_processors` entry point. Add the processor to the file service
-configuration used by the records that should be scanned.
+`oarepo.file_processors` entry point.
 
 ## Configuration
 
@@ -40,7 +39,7 @@ configuration. The processor reads the active Flask configuration when it
 processes a file. ClamAV signatures are reloaded before each scan.
 
 The package registers the `antivirus-scan.failure` notification builder when
-the Flask extension is initialized. Its email content is rendered by the
+the OARepoAntivirus extension is initialized. Its email content is rendered by the
 bundled template:
 
 ```text
@@ -67,7 +66,8 @@ oarepo_antivirus/templates/invenio_notifications/antivirus-scan.failure.jinja
    is rendered using the configured notification template.
 
 The processor does not reject, quarantine, or delete files. The host
-application can enforce those policies using the `antivirus_detected` metadata.
+application can enforce those policies using the `antivirus_detected` metadata
+(e.g. `FileRecord.metadata.get(antivirus_detected, None)`)
 
 ### Error handling
 
@@ -86,10 +86,10 @@ logged and do not undo the `antivirus_detected` metadata update.
 The commands enqueue Celery tasks; they do not wait for scans to finish. A
 Celery worker must be running.
 
-Scan all files attached to one record:
+Scan all files attached to one RDM record:
 
 ```bash
-invenio antivirus scan record <record-id>
+invenio antivirus scan record <record-pid>
 ```
 
 Scan all records returned by the application's current RDM records service:

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from invenio_records_resources.services import FileService
     from invenio_records_resources.services.records.results import RecordItem
 
+
 # --- helpers ----
 
 
@@ -33,12 +34,10 @@ def print_scan_file_result(file_record: FileRecord) -> None:
     metadata = file_record.metadata or {}
 
     # get the details
-    details: str | None = None
-    if metadata.get("antivirus_detected", False) or metadata.get("antivirus_error", False):
-        details = metadata.get("antivirus_detected") or metadata.get("antivirus_error")
+    details: str | None = metadata.get("antivirus_detected", None)
 
     # print the status
-    status = f"FAIL, details: {details}" if details else "OK"
+    status = f"FAIL, details: {details}" if details is not None else "OK"
     current_app.logger.info("  - %s: %s", file_record.key, status)
 
 
@@ -92,6 +91,7 @@ def record_scan(record_id: str) -> None:
         record_item: RecordItem = current_rdm_records_service.read(system_identity, record_id)
         record: RDMRecord = record_from_result(record_item, RDMRecord)
         scan_files(record)
+
     except Exception:
         current_app.logger.exception("An error occurred during file scanning")
 

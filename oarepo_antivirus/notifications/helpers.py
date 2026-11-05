@@ -64,10 +64,12 @@ def notify_scan_failure(file_record: FileRecord, details: str) -> None:
         )
 
         broadcast_notification.delay(notification.dumps())
+
     except ValueError:
         current_app.logger.warning(
-            "Antivirus finding for record %s was not notified: owner has no email",
-            rdm_record_pid,
+            "Antivirus finding for file %s could not be notified: email extraction failed",
+            file_key,
+            exc_info=True,
         )
     except Exception:
         current_app.logger.warning(

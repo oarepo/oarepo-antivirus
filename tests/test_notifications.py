@@ -71,7 +71,7 @@ def test_notify_scan_failure_does_not_queue_without_owner_email(
         notify_scan_failure(file_record, "Eicar-Test-Signature")
 
     broadcast.assert_not_called()
-    assert "owner has no email" in caplog.text
+    assert "Failed to resolve User.email for record" in caplog.text
 
 
 def test_notify_scan_failure_logs_and_suppresses_dispatch_errors(

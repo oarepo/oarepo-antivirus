@@ -8,6 +8,7 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
+# hide unwanted warning
 with warnings.catch_warnings(record=False):
     warnings.filterwarnings(
         "ignore",
@@ -51,7 +52,9 @@ class Antivirus:
         :param file_stream: File-like object accepted by ClamAV's ``INSTREAM``.
         :param address: Mapping with the daemon ``ip`` and integer ``port``.
         :return: The status and optional details returned for the stream.
+        :raises clamd.BufferTooLongError: if the buffer size exceeds clamd limits.
         :raises clamd.ConnectionError: If the daemon cannot be reached.
+        :raises ValueError: If the address is malformed.
         :raises OSError: If the stream cannot be read by the scanner.
 
         The stream is passed to ClamAV's ``INSTREAM`` command.
