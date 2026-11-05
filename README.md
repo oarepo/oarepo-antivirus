@@ -35,13 +35,6 @@ The default ClamAV address is defined by `ANTIVIRUS_DAEMON_ADDRESS` in
 ANTIVIRUS_DAEMON_ADDRESS = {"ip": "127.0.0.1", "port": 3310}
 ```
 
-For a Docker-based setup, configure the address with the ClamAV service name
-from the application container, for example:
-
-```python
-ANTIVIRUS_DAEMON_ADDRESS = {"ip": "clamav", "port": 3310}
-```
-
 The setting can be overridden in the OARepo application's `conf.py` or Flask
 configuration. The processor reads the active Flask configuration when it
 processes a file. ClamAV signatures are reloaded before each scan.
@@ -53,9 +46,6 @@ bundled template:
 ```text
 oarepo_antivirus/templates/invenio_notifications/antivirus-scan.failure.jinja
 ```
-
-Configure the application's standard Invenio Notifications email backend,
-mail settings, and Celery worker for delivery.
 
 ## Behaviour on RecordFile
 
@@ -123,7 +113,7 @@ Start the ClamAV test service from the repository root:
 Run the test suite:
 
 ```bash
-pytest
+./run.sh test
 ```
 
 The script uses `tests/docker/docker-compose.yaml` and accepts `start` and
