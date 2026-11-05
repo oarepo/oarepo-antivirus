@@ -67,7 +67,7 @@ oarepo_antivirus/templates/invenio_notifications/antivirus-scan.failure.jinja
 
 The processor does not reject, quarantine, or delete files. The host
 application can enforce those policies using the `antivirus_detected` metadata
-(e.g. `FileRecord.metadata.get(antivirus_detected, None)`)
+(e.g. `FileRecord.metadata.get("antivirus_detected", None)`)
 
 ### Error handling
 
