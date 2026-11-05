@@ -5,10 +5,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
-
-from jinja2 import ChoiceLoader, FileSystemLoader
 
 if TYPE_CHECKING:
     from flask import Flask

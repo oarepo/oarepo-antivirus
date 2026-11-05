@@ -1,15 +1,18 @@
 # OARepo Antivirus
 
-`oarepo-antivirus` adds ClamAV scanning to file processing in an OARepo application. Its registered file processor accepts every file record, scans its stream, and records detections in the file record metadata.
+`oarepo-antivirus` adds ClamAV scanning to file processing in an OARepo
+application. It provides a file processor, notification delivery for detected
+files, and CLI commands for scanning records.
 
 ## Requirements
 
 - Python 3.14
 - OARepo 14
-- A ClamAV daemon reachable by the application at the address configured by
-  `ANTIVIRUS_DAEMON_ADDRESS` in `oarepo_antivirus/config.py`
+- A ClamAV daemon reachable through a network socket
+- An OARepo application with Celery configured for task execution
 
-The package uses the `clamd` Python client to communicate with ClamAV. The daemon must be configured to accept network socket connections and support the `INSTREAM` command.
+The ClamAV daemon must accept network socket connections and support the
+`INSTREAM` command. The package uses the `clamd` Python client.
 
 ## Installation
 
@@ -19,100 +22,113 @@ Install the package in the environment used by the OARepo application:
 uv pip install oarepo-antivirus
 ```
 
-The package registers `AntivirusFileProcessor` through the `oarepo.file_processors` entry point. In an application that discovers OARepo file processor entry points.
+The package registers `AntivirusFileProcessor` through the
+`oarepo.file_processors` entry point. Add the processor to the file service
+configuration used by the records that should be scanned.
 
-## Scan behavior
+## Configuration
 
-For each file record, `AntivirusFileProcessor` opens the file as a binary stream and passes it to ClamAV using the `INSTREAM` command. ClamAV signatures are reloaded before each scan. A result with status `OK` is treated as clean and leaves the FileRecord metadata unchanged. Any other result stores its details in metadata under `antivirus_detected`:
+The default ClamAV address is defined by `ANTIVIRUS_DAEMON_ADDRESS` in
+`oarepo_antivirus/config.py`:
 
-```json
-{
-  "antivirus_detected": "Eicar-Test-Signature"
-}
+```python
+ANTIVIRUS_DAEMON_ADDRESS = {"ip": "127.0.0.1", "port": 3310}
 ```
 
-Exceptions raised while configuring the scanner, opening the stream, or communicating with ClamAV are caught and logged by the processor. Existing metadata is preserved. The processor does not itself reject, quarantine, or delete a file; the host application must enforce any policy based on `antivirus_detected`.
-
-The default scanner address is defined by `ANTIVIRUS_DAEMON_ADDRESS` in
-`oarepo_antivirus/config.py` (`127.0.0.1:3310`). To change the package default,
-edit that setting:
+For a Docker-based setup, configure the address with the ClamAV service name
+from the application container, for example:
 
 ```python
 ANTIVIRUS_DAEMON_ADDRESS = {"ip": "clamav", "port": 3310}
 ```
 
-You can also override the setting in the OARepo application's Flask
-configuration, for example:
+The setting can be overridden in the OARepo application's `conf.py` or Flask
+configuration. The processor reads the active Flask configuration when it
+processes a file. ClamAV signatures are reloaded before each scan.
 
-```python
-ANTIVIRUS_DAEMON_ADDRESS = {"ip": "clamav", "port": 3310}
+The package registers the `antivirus-scan.failure` notification builder when
+the Flask extension is initialized. Its email content is rendered by the
+bundled template:
+
+```text
+oarepo_antivirus/templates/invenio_notifications/antivirus-scan.failure.jinja
 ```
 
-The file processor reads this setting from the active Flask application when it scans a file. ClamAV is asked to reload its signatures before each stream scan.
+Configure the application's standard Invenio Notifications email backend,
+mail settings, and Celery worker for delivery.
 
-## Testing
+## Behaviour on RecordFile
 
-Before running the tests, start the ClamAV test service by executing the Docker
-Compose setup script:
+`AntivirusFileProcessor` accepts every `FileRecord`. For each record it:
 
-```bash
-tests/docker/test-setup.sh start
-```
+1. Opens the file as a binary stream.
+2. Sends the stream to ClamAV using `INSTREAM`.
+3. Leaves metadata unchanged when ClamAV returns `OK`.
+4. Stores a non-`OK` result in `antivirus_detected`:
 
-The script uses `tests/docker/docker-compose.yaml` to start the service. Stop
-the service after testing with:
+   ```json
+   {
+     "antivirus_detected": "Eicar-Test-Signature"
+   }
+   ```
 
-```bash
-tests/docker/test-setup.sh stop
-```
+5. Queues an `antivirus-scan.failure` email notification for the record owner.
+   The notification contains the record ID, file name, and scanner details and
+   is rendered using the configured notification template.
 
-## Scan a record from the command line
+The processor does not reject, quarantine, or delete files. The host
+application can enforce those policies using the `antivirus_detected` metadata.
 
-The package provides an Invenio CLI command to enqueue a scan of all files attached to an RDM record. It runs through Celery, so a worker must be running:
+### Error handling
+
+Exceptions raised while reading the Flask configuration, opening the file,
+reloading signatures, or communicating with ClamAV are caught and logged by
+the processor. Existing metadata is preserved and the exception is not
+propagated to the file-processing caller.
+
+Notification errors are also isolated from file processing. If the owner
+cannot be resolved or has no email address, no notification is sent and a
+warning is logged. Failures while building or queueing the notification are
+logged and do not undo the `antivirus_detected` metadata update.
+
+## CLI interface
+
+The commands enqueue Celery tasks; they do not wait for scans to finish. A
+Celery worker must be running.
+
+Scan all files attached to one record:
 
 ```bash
 invenio antivirus scan record <record-id>
 ```
 
-The command reports that the scan was enqueued; it does not wait for the scan to finish.
-
-## Scan all records from the command line
-
-To enqueue a scan of all published records from all registered OARepo RDM
-metadata models:
+Scan all records returned by the application's current RDM records service:
 
 ```bash
 invenio antivirus scan all
 ```
 
-The task iterates `current_runtime.models`, selects each model whose service is
-an `RDMRecordService`, and scans its records through that model's own service.
-It therefore covers multiple metadata models.
-Records with files disabled are skipped. Draft records and media-file services are not included.
-The command requires a running Celery worker.
+Records whose file service is disabled are skipped. Errors while reading a
+record or scanning its files are logged by the Celery task and do not escape
+the task invocation. The CLI itself only reports that the task was queued.
 
-## Antivirus notifications
+## Testing
 
-The package emits an `antivirus-scan.failure` notification to the user who
-uploaded the record when a scan detects a threat or cannot contact the scanner.
-The application must have the standard Invenio Notifications email backend,
-Celery, and mail settings configured. No notification is sent if the record
-owner cannot be resolved or has no email address.
+Start the ClamAV test service from the repository root:
 
-## Direct use
-
-The scanner wrapper can also be used without the file processor:
-
-```python
-from oarepo_antivirus.services.files.antivirus_wrapper import Antivirus
-
-with open("upload.bin", "rb") as stream:
-    result = Antivirus.scan_stream(stream, {"ip": "127.0.0.1", "port": 3310})
-
-if result.is_ok:
-    print("File is clean")
-else:
-    print(f"Scan reported: {result.details}")
+```bash
+./test-setup.sh start
 ```
 
-`Antivirus.scan_stream` returns an `AntivirusResult`. Its `is_ok` property is true only for a clean `OK` status, and `details` contains the detection name or scanner response details when the status is not `OK`. Connection and stream exceptions are raised by the wrapper; the file processor catches and logs them.
+Run the test suite:
+
+```bash
+pytest
+```
+
+The script uses `tests/docker/docker-compose.yaml` and accepts `start` and
+`stop` commands. Stop the service after testing:
+
+```bash
+./test-setup.sh stop
+```

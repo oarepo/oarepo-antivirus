@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, override
 from flask import current_app
 from invenio_records_resources.services.files.processors import FileProcessor
 
-from ....notifications import notify_scan_failure
+from oarepo_antivirus.notifications.helpers import notify_scan_failure
+
 from ..antivirus_wrapper import Antivirus, AntivirusResult
 
 if TYPE_CHECKING:
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class AntivirusFileProcessor(FileProcessor):
-    """File processor that accepts every file record for antivirus handling."""
+    """Scan every file record with the configured ClamAV daemon."""
 
     @override
     def can_process(self, file_record: FileRecord) -> bool:
@@ -32,7 +33,9 @@ class AntivirusFileProcessor(FileProcessor):
     def process(self, file_record: FileRecord) -> None:
         """Run this processor for ``file_record``.
 
-        This method modifies the record's ``metadata`` in case of malware detection.
+        A non-``OK`` result is stored as ``antivirus_detected`` and queued for
+        owner notification. Scanner and stream errors are logged; existing
+        metadata is retained and processing does not raise them.
         """
         metadata = file_record.metadata or {}
 

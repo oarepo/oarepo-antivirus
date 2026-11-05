@@ -21,8 +21,8 @@ with warnings.catch_warnings(record=False):
 class AntivirusResult:
     """Represent a ClamAV scan status and its optional details.
 
-    A status of ``OK`` indicates a clean scan; other statuses represent a
-    detection of malware. In that case it is possible to get the details via property ``details``.
+    A status of ``OK`` indicates a clean scan; other statuses indicate a
+    detection or scanner response that should be treated as a failure.
     """
 
     def __init__(self, status: str, details: str | None):
@@ -42,13 +42,20 @@ class AntivirusResult:
 
 
 class Antivirus:
-    """Provide a convenience interface to the local ClamAV daemon."""
+    """Provide a convenience interface to a network-accessible ClamAV daemon."""
 
     @staticmethod
     def scan_stream(file_stream: Any, address: dict[str, str | int]) -> AntivirusResult:
         """Scan a binary file stream and return its status and details.
 
+        :param file_stream: File-like object accepted by ClamAV's ``INSTREAM``.
+        :param address: Mapping with the daemon ``ip`` and integer ``port``.
+        :return: The status and optional details returned for the stream.
+        :raises clamd.ConnectionError: If the daemon cannot be reached.
+        :raises OSError: If the stream cannot be read by the scanner.
+
         The stream is passed to ClamAV's ``INSTREAM`` command.
+
         """
         clam = clamd.ClamdNetworkSocket(host=str(address["ip"]), port=int(address["port"]))
         clam.reload()  # update the signature database

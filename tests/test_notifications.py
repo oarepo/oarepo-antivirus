@@ -6,12 +6,15 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 from flask import Flask
-import pytest
 
-from oarepo_antivirus.notifications import notify_scan_failure
+from oarepo_antivirus.notifications.helpers import notify_scan_failure
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def _file_record(owner: object | None) -> MagicMock:
@@ -35,7 +38,7 @@ def test_notify_scan_failure_broadcasts_to_record_owner() -> None:
     with (
         app.app_context(),
         patch(
-            "oarepo_antivirus.notifications.broadcast_notification.delay",
+            "oarepo_antivirus.notifications.helpers.broadcast_notification.delay",
         ) as broadcast,
     ):
         notify_scan_failure(file_record, "Eicar-Test-Signature")
@@ -62,7 +65,7 @@ def test_notify_scan_failure_does_not_queue_without_owner_email(
     with (
         app.app_context(),
         patch(
-            "oarepo_antivirus.notifications.broadcast_notification.delay",
+            "oarepo_antivirus.notifications.helpers.broadcast_notification.delay",
         ) as broadcast,
     ):
         notify_scan_failure(file_record, "Eicar-Test-Signature")
@@ -83,7 +86,7 @@ def test_notify_scan_failure_logs_and_suppresses_dispatch_errors(
     with (
         app.app_context(),
         patch(
-            "oarepo_antivirus.notifications.broadcast_notification.delay",
+            "oarepo_antivirus.notifications.helpers.broadcast_notification.delay",
             side_effect=RuntimeError("queue unavailable"),
         ),
     ):
