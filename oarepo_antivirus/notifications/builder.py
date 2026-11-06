@@ -7,35 +7,14 @@ from __future__ import annotations
 
 from typing import Any, override
 
-from invenio_notifications.models import Notification, Recipient
+from invenio_notifications.models import Notification
 from invenio_notifications.services.builders import NotificationBuilder
 from invenio_notifications.services.generators import (
     EmailBackendGenerator,
+    EntityResolve,
     RecipientGenerator,
 )
-
-
-class ContextEmailRecipient(RecipientGenerator):
-    """Add a recipient whose email address is stored in notification context.
-
-    :param key: Context key containing the recipient's email address.
-    """
-
-    def __init__(self, key: str):
-        """Create a recipient generator for ``key``."""
-        self._key = key
-
-    @override
-    def __call__(
-        self,
-        notification: Notification,
-        recipients: dict[str, Recipient],
-    ) -> dict[str, Recipient]:
-        """Add the context email to ``recipients`` when it is present."""
-        email = notification.context.get(self._key)
-        if email:
-            recipients[email] = Recipient(data={"email": email})
-        return recipients
+from invenio_users_resources.notifications.generators import UserRecipient
 
 
 class AntivirusScanFailureNotificationBuilder(NotificationBuilder):
@@ -56,9 +35,10 @@ class AntivirusScanFailureNotificationBuilder(NotificationBuilder):
             context={
                 "record_id": kwargs["record_id"],
                 "findings": kwargs["findings"],
-                "owner_email": kwargs["owner_email"],
+                "receiver": {"user": str(kwargs["receiver"])},
             },
         )
 
-    recipients: list[RecipientGenerator] = [ContextEmailRecipient(key="owner_email")]  # noqa: RUF012
+    context = [EntityResolve(key="receiver")]  # noqa: RUF012
+    recipients: list[RecipientGenerator] = [UserRecipient(key="receiver")]  # noqa: RUF012
     recipient_backends: list[EmailBackendGenerator] = [EmailBackendGenerator()]  # noqa: RUF012

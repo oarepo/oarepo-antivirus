@@ -13,34 +13,8 @@ from invenio_notifications.tasks import broadcast_notification
 from .builder import AntivirusScanFailureNotificationBuilder
 
 if TYPE_CHECKING:
-    from invenio_accounts.models import User
     from invenio_rdm_records.records import RDMRecord
-    from invenio_rdm_records.records.systemfields.access import Owner
     from invenio_records_resources.records import FileRecord
-
-
-def get_record_owner_email(rdm_record: RDMRecord) -> str:
-    """Retrieve the email address of the record's owner.
-
-    :param rdm_record: The RDM record instance.
-    :return: The owner's email address as a string.
-    :raises ValueError: If the owner, user, or email cannot be resolved.
-    """
-    rdm_record_pid = str(rdm_record.pid.pid_value)
-
-    owner: Owner | None = rdm_record.parent.access.owned_by
-    if not owner:
-        raise ValueError(f"Failed to resolve owner for record {rdm_record_pid}")
-
-    user: User | None = owner.resolve()
-    if not user:
-        raise ValueError(f"Failed to resolve owner User for record {rdm_record_pid}")
-
-    owner_email: str | None = getattr(user, "email", None)
-    if not owner_email:
-        raise ValueError(f"Failed to resolve User.email for record {rdm_record_pid}")
-
-    return owner_email
 
 
 def notify_scan_failure(file_record: FileRecord, details: str) -> None:
@@ -55,14 +29,13 @@ def notify_scan_failure(file_record: FileRecord, details: str) -> None:
         rdm_record: RDMRecord = cast("RDMRecord", file_record.record)
         rdm_record_pid: str = str(rdm_record.pid.pid_value)
 
-        owner_email: str = get_record_owner_email(rdm_record)
-
         notification = AntivirusScanFailureNotificationBuilder.build(
             record_id=rdm_record_pid,
             findings=[{"file": file_key, "details": details}],
-            owner_email=owner_email,
+            receiver=rdm_record.parent.access.owned_by.owner_id,
         )
 
+        # current_notifications_manager.broadcast(notification) fails
         broadcast_notification.delay(notification.dumps())
 
     except ValueError:

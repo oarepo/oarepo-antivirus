@@ -31,8 +31,7 @@ def _file_record(owner: object | None) -> MagicMock:
 def test_notify_scan_failure_broadcasts_to_record_owner() -> None:
     """Queue serialized notification data addressed to the record owner."""
     app = Flask(__name__)
-    user = SimpleNamespace(email="uploader@example.org")
-    owner = SimpleNamespace(resolve=MagicMock(return_value=user))
+    owner = SimpleNamespace(owner_id="user-1")
     file_record = _file_record(owner)
 
     with (
@@ -43,35 +42,14 @@ def test_notify_scan_failure_broadcasts_to_record_owner() -> None:
     ):
         notify_scan_failure(file_record, "Eicar-Test-Signature")
 
-    owner.resolve.assert_called_once_with()
     broadcast.assert_called_once()
     notification = broadcast.call_args.args[0]
     assert notification["type"] == "antivirus-scan.failure"
     assert notification["context"] == {
         "record_id": "rec-1",
         "findings": [{"file": "virus.txt", "details": "Eicar-Test-Signature"}],
-        "owner_email": "uploader@example.org",
+        "receiver": {"user": "user-1"},
     }
-
-
-def test_notify_scan_failure_does_not_queue_without_owner_email(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Skip dispatch and log a warning when the owner has no email address."""
-    app = Flask(__name__)
-    owner = SimpleNamespace(resolve=MagicMock(return_value=SimpleNamespace(email=None)))
-    file_record = _file_record(owner)
-
-    with (
-        app.app_context(),
-        patch(
-            "oarepo_antivirus.notifications.helpers.broadcast_notification.delay",
-        ) as broadcast,
-    ):
-        notify_scan_failure(file_record, "Eicar-Test-Signature")
-
-    broadcast.assert_not_called()
-    assert "Failed to resolve User.email for record" in caplog.text
 
 
 def test_notify_scan_failure_logs_and_suppresses_dispatch_errors(
@@ -79,8 +57,7 @@ def test_notify_scan_failure_logs_and_suppresses_dispatch_errors(
 ) -> None:
     """Do not propagate notification task submission failures to file processing."""
     app = Flask(__name__)
-    user = SimpleNamespace(email="uploader@example.org")
-    owner = SimpleNamespace(resolve=MagicMock(return_value=user))
+    owner = SimpleNamespace(owner_id="user-1")
     file_record = _file_record(owner)
 
     with (
