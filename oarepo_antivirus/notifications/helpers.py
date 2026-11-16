@@ -35,7 +35,6 @@ def notify_scan_failure(file_record: FileRecord, details: str) -> None:
             receiver=rdm_record.parent.access.owned_by.owner_id,
         )
 
-        # current_notifications_manager.broadcast(notification) fails
         broadcast_notification.delay(notification.dumps())
 
     except ValueError:
