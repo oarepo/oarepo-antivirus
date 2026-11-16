@@ -10,7 +10,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from flask import Flask
-from invenio_rdm_records.services import RDMRecordService
 
 from oarepo_antivirus import tasks
 from oarepo_antivirus.services.files.processors.antivirus import AntivirusFileProcessor
@@ -59,7 +58,6 @@ def test_scan_files_processes_and_commits_enabled_files(app: Flask) -> None:
     record = MagicMock()
     record.files.enabled = True
     file_record = _file_record()
-    record.files.items.return_value = [("example.txt", file_record)]
     record.files.entries = {"example.txt": file_record}
     processor = AntivirusFileProcessor()
     processor.process = MagicMock()
@@ -155,46 +153,43 @@ def test_record_scan_logs_errors(app: Flask, caplog: pytest.LogCaptureFixture) -
     assert "read failed" in caplog.text
 
 
-def test_scan_all_scans_all_rdm_models(app: Flask) -> None:
-    """Scan records from every registered RDM model service."""
-    service = MagicMock(spec=RDMRecordService)
+def test_scan_all_delegates_each_rdm_record_for_scanning(app: Flask) -> None:
+    """Delegate each record ID returned by the RDM service to record_scan."""
+    service = MagicMock()
     service.scan.return_value = [{"id": "record-id"}]
-    record = MagicMock()
-    service.read.return_value = SimpleNamespace(_record=record)
-    rdm_model = SimpleNamespace(service=service)
-    other_model = SimpleNamespace(service=MagicMock())
 
     with (
         app.app_context(),
         patch.object(
             tasks,
-            "current_runtime",
-            new=MagicMock(),
-        ) as runtime,
+            "current_rdm_records_service",
+            new=service,
+        ),
         patch.object(
             tasks,
-            "scan_files",
-        ) as scan_files,
+            "record_scan",
+        ) as record_scan,
     ):
-        runtime.models = {"datasets": rdm_model, "other": other_model}
-        tasks.scan_all.run()
+        tasks.record_scan_all.run()
 
     service.scan.assert_called_once_with(tasks.system_identity)
-    service.read.assert_called_once_with(tasks.system_identity, "record-id")
-    scan_files.assert_called_once_with(record)
-    other_model.service.scan.assert_not_called()
+    service.read.assert_not_called()
+    record_scan.assert_called_once_with("record-id")
 
 
 def test_scan_all_logs_errors(app: Flask, caplog: pytest.LogCaptureFixture) -> None:
-    """Log failures raised while scanning models."""
-    service = MagicMock(spec=RDMRecordService)
+    """Log failures raised while listing records to scan."""
+    service = MagicMock()
     service.scan.side_effect = RuntimeError("scan failed")
 
     with (
         app.app_context(),
-        patch.object(tasks, "current_runtime", new=MagicMock()) as runtime,
+        patch.object(
+            tasks,
+            "current_rdm_records_service",
+            new=service,
+        ),
     ):
-        runtime.models = {"datasets": SimpleNamespace(service=service)}
-        tasks.scan_all.run()
+        tasks.record_scan_all.run()
 
     assert "scan failed" in caplog.text

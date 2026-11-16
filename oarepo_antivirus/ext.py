@@ -32,5 +32,14 @@ class OARepoAntivirus:
     def init_config(self, app: Flask) -> None:
         """Initialize configuration."""
         from . import config
+        from .notifications import AntivirusScanFailureNotificationBuilder
 
+        # ClamAV daemon address
         app.config.setdefault("ANTIVIRUS_DAEMON_ADDRESS", config.ANTIVIRUS_DAEMON_ADDRESS)
+
+        # Builder for mail notifications
+        builders = app.config.setdefault("NOTIFICATIONS_BUILDERS", {})
+        builders.setdefault(
+            AntivirusScanFailureNotificationBuilder.type,
+            AntivirusScanFailureNotificationBuilder,
+        )

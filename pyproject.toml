@@ -30,6 +30,12 @@ antivirus = "oarepo_antivirus.cli:antivirus_cli"
 [project.entry-points."invenio_celery.tasks"]
 oarepo_antivirus = "oarepo_antivirus.tasks"
 
+[project.entry-points."invenio_base.api_blueprints"]
+oarepo_antivirus = "oarepo_antivirus.blueprints:blueprint"
+
+[project.entry-points."invenio_base.blueprints"]
+oarepo_antivirus = "oarepo_antivirus.blueprints:blueprint"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "/oarepo_antivirus",

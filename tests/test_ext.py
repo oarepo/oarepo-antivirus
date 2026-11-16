@@ -19,6 +19,7 @@ def test_init_app_registers_extension() -> None:
 
     assert app.extensions["oarepo-antivirus"] is extension
     assert extension.app is app
+    assert "antivirus-scan.failure" in app.config["NOTIFICATIONS_BUILDERS"]
 
 
 def test_constructor_can_initialize_app() -> None:

@@ -12,13 +12,13 @@ from typing import BinaryIO
 import pytest
 from flask import Flask
 
+from oarepo_antivirus.config import ANTIVIRUS_DAEMON_ADDRESS
+
 # Fixture type: a generator yielding an opened binary file.
 OpenedFile = Generator[BinaryIO]
 
 # Directory containing the test sample data.
 FILES_PATH = Path(__file__).resolve().parent / "data"
-
-from oarepo_antivirus.config import ANTIVIRUS_DAEMON_ADDRESS
 
 
 @pytest.fixture
