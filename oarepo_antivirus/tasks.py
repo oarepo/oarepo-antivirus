@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING
 from celery import shared_task
 from flask import current_app
 from invenio_access.permissions import system_identity
+from invenio_db.uow import UnitOfWork
 from invenio_rdm_records.proxies import current_rdm_records_service
 from invenio_rdm_records.records import RDMRecord
-from invenio_records_resources.services.uow import RecordCommitOp, UnitOfWork
+from invenio_records_resources.services.uow import RecordCommitOp
 from oarepo_runtime.proxies import current_runtime
 from oarepo_runtime.typing import record_from_result
 
